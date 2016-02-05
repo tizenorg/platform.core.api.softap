@@ -5,7 +5,7 @@
 	"http://standards.freedesktop.org/dbus/1.0/introspect.dtd">
 
 <node>
-	<interface name="org.tizen.tethering">
+	<interface name="org.tizen.softap">
 
 		<!-- Method definitions -->
 
