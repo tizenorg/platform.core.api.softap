@@ -157,11 +157,11 @@ typedef enum {
 	E_SIGNAL_MAX
 } mobile_ap_sig_e;
 
-#define SOFTAP_SERVICE_OBJECT_PATH	"/Tethering"
-#define SOFTAP_SERVICE_NAME		"org.tizen.tethering"
-#define SOFTAP_SERVICE_INTERFACE	"org.tizen.tethering"
+#define SOFTAP_SERVICE_OBJECT_PATH	"/Softap"
+#define SOFTAP_SERVICE_NAME		"org.tizen.softap"
+#define SOFTAP_SERVICE_INTERFACE	"org.tizen.softap"
 
-#define SOFTAP_SIGNAL_MATCH_RULE	"type='signal',interface='org.tizen.tethering'"
+#define SOFTAP_SIGNAL_MATCH_RULE	"type='signal',interface='org.tizen.softap'"
 #define SOFTAP_SIGNAL_NAME_LEN	64
 
 #define SIGNAL_NAME_NET_CLOSED		"net_closed"
