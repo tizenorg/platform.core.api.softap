@@ -39,6 +39,10 @@ extern "C" {
  */
 typedef void * softap_h;
 
+#ifndef TIZEN_ERROR_SOFTAP
+#define TIZEN_ERROR_SOFTAP -0x03200000
+#endif
+
 /**
  * @brief Enumeration for the softap.
  * @since_tizen 3.0
@@ -49,8 +53,8 @@ typedef enum {
     SOFTAP_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER,  /**< Invalid parameter */
     SOFTAP_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,  /**< Out of memory */
     SOFTAP_ERROR_RESOURCE_BUSY = TIZEN_ERROR_RESOURCE_BUSY,  /**< Resource busy */
-    SOFTAP_ERROR_NOT_ENABLED = TIZEN_ERROR_TETHERING | 0x0501,  /**< Not enabled */
-    SOFTAP_ERROR_OPERATION_FAILED = TIZEN_ERROR_TETHERING | 0x0502,  /**< Operation failed */
+    SOFTAP_ERROR_NOT_ENABLED = TIZEN_ERROR_SOFTAP | 0x0501,  /**< Not enabled */
+    SOFTAP_ERROR_OPERATION_FAILED = TIZEN_ERROR_SOFTAP | 0x0502,  /**< Operation failed */
     SOFTAP_ERROR_INVALID_OPERATION = TIZEN_ERROR_INVALID_OPERATION, /**< Invalid operation */
     SOFTAP_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED, /**< API is not supported */
     SOFTAP_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED,  /**< Permission denied */
@@ -149,19 +153,6 @@ typedef void (*softap_enabled_cb)(softap_error_e result, bool is_requested, void
 typedef void (*softap_disabled_cb)(softap_error_e result, softap_disabled_cause_e cause, void *user_data);
 
 /**
- * @brief Called when the connection state is changed.
- * @since_tizen 3.0
- * @remarks @a client is valid only in this function. In order to use it outside this function, a user must copy the client with softap_client_clone().
- * @param[in]  client  The client of which connection state is changed
- * @param[in]  opened  @c true when connection is opened, otherwise false
- * @param[in]  user_data  The user data passed from softap_set_connection_state_changed_cb()
- * @pre  If you register callback function using softap_set_connection_state_changed_cb(), this will be invoked when the connection state is changed.
- * @see	softap_set_connection_state_changed_cb()
- * @see	softap_unset_connection_state_changed_cb()
- */
-typedef void (*softap_connection_state_changed_cb)(softap_client_h client, bool opened, void *user_data);
-
-/**
  * @brief Called when you get the connected client repeatedly.
  * @since_tizen 3.0
  * @remarks @a client is valid only in this function. In order to use the client outside this function, a user must copy the client with softap_client_clone().
@@ -172,17 +163,6 @@ typedef void (*softap_connection_state_changed_cb)(softap_client_h client, bool 
  * @see  softap_foreach_connected_clients()
  */
 typedef bool(*softap_connected_client_cb)(softap_client_h client, void *user_data);
-
-/**
- * @brief Called when you get the data usage.
- * @since_tizen 3.0
- * @param[in]  result  The result of getting the data usage
- * @param[in]  received_data  The usage of received data
- * @param[in]  sent_data  The usage of sent data
- * @param[in]  user_data  The user data passed from the request function
- * @pre  softap_get_data_usage() will invoked this callback.
- */
-typedef void (*softap_data_usage_cb)(softap_error_e result, unsigned long long received_data, unsigned long long sent_data, void *user_data);
 
 /**
  * @brief Called when the security type of Soft AP is changed.
@@ -375,22 +355,6 @@ int softap_get_gateway_address(softap_h softap, softap_address_family_e address_
 int softap_get_subnet_mask(softap_h softap, softap_address_family_e address_family, char **subnet_mask);
 
 /**
- * @brief Gets the data usage.
- * @since_tizen 3.0
- * @param[in]  softap  The softap handle
- * @param[out]  usage  The data usage
- * @return 0 on success, otherwise negative error value
- * @retval  #SOFTAP_ERROR_NONE  Successful
- * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
- * @retval  #SOFTAP_ERROR_OPERATION_FAILED  Operation failed
- * @retval  #SOFTAP_ERROR_NOT_ENABLED  Not enabled
- * @pre  The softap must be enabled.
- * @see  softap_is_enabled()
- * @see  softap_enable()
- */
-int softap_get_data_usage(softap_h softap, softap_data_usage_cb callback, void *user_data);
-
-/**
  * @brief Gets the clients which are connected.
  * @since_tizen 3.0
  * @param[in]  softap  The softap handle
@@ -449,28 +413,6 @@ int softap_set_disabled_cb(softap_h softap,  softap_disabled_cb callback, void *
  * @see  SOFTAP_set_disabled_cb()
  */
 int softap_unset_disabled_cb(softap_h softap);
-
-/**
- * @brief Registers the callback function, which is called when the state of connection is changed.
- * @since_tizen 3.0
- * @param[in]  softap  The softap handle
- * @param[in]  callback  The callback function to invoke
- * @param[in]  user_data  The user data to be passed to the callback function
- * @retval  #SOFTAP_ERROR_NONE  Successful
- * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
- * @see  softap_unset_connection_state_changed_cb_cb()
- */
-int softap_set_connection_state_changed_cb(softap_h softap, softap_connection_state_changed_cb callback, void *user_data);
-
-/**
- * @brief Unregisters the callback function, which is called when the state of connection is changed.
- * @since_tizen 3.0
- * @param[in]  softap  The softap handle
- * @retval  #SOFTAP_ERROR_NONE  Successful
- * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
- * @see  softap_set_connection_state_changed_cb()
- */
-int softap_unset_connection_state_changed_cb(softap_h softap);
 
 /**
  * @brief Registers the callback function, which is called when the security type of softap is changed.
@@ -718,8 +660,6 @@ int softap_client_destroy(softap_client_h client);
  * @retval  #SOFTAP_ERROR_NONE  Successful
  * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
  * @retval  #SOFTAP_ERROR_OUT_OF_MEMORY  Out of memory
- * @see  SOFTAP_usb_get_connected_client()
- * @see  SOFTAP_connection_state_changed_cb()
  */
 int softap_client_get_name(softap_client_h client, char **name);
 
@@ -734,8 +674,6 @@ int softap_client_get_name(softap_client_h client, char **name);
  * @retval  #SOFTAP_ERROR_NONE  Successful
  * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
  * @retval  #SOFTAP_ERROR_OUT_OF_MEMORY  Out of memory
- * @see  SOFTAP_usb_get_connected_client()
- * @see  SOFTAP_connection_state_changed_cb()
  */
 int softap_client_get_ip_address(softap_client_h client, softap_address_family_e address_family, char **ip_address);
 
@@ -749,8 +687,6 @@ int softap_client_get_ip_address(softap_client_h client, softap_address_family_e
  * @retval  #SOFTAP_ERROR_NONE  Successful
  * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
  * @retval  #SOFTAP_ERROR_OUT_OF_MEMORY  Out of memory
- * @see  SOFTAP_usb_get_connected_client()
- * @see  SOFTAP_connection_state_changed_cb()
  */
 int softap_client_get_mac_address(softap_client_h client, char **mac_address);
 
@@ -762,8 +698,6 @@ int softap_client_get_mac_address(softap_client_h client, char **mac_address);
  * @return  0 on success, otherwise a negative error value
  * @retval  #SOFTAP_ERROR_NONE  Successful
  * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
- * @see  SOFTAP_usb_get_connected_client()
- * @see  SOFTAP_connection_state_changed_cb()
  */
 int softap_client_get_time(softap_client_h client, time_t *timestamp);
 
