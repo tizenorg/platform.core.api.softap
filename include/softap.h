@@ -39,6 +39,10 @@ extern "C" {
  */
 typedef void * softap_h;
 
+#ifndef TIZEN_ERROR_SOFTAP
+#define TIZEN_ERROR_SOFTAP -0x03200000
+#endif
+
 /**
  * @brief Enumeration for the softap.
  * @since_tizen 3.0
@@ -49,8 +53,8 @@ typedef enum {
     SOFTAP_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER,  /**< Invalid parameter */
     SOFTAP_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,  /**< Out of memory */
     SOFTAP_ERROR_RESOURCE_BUSY = TIZEN_ERROR_RESOURCE_BUSY,  /**< Resource busy */
-    SOFTAP_ERROR_NOT_ENABLED = TIZEN_ERROR_TETHERING | 0x0501,  /**< Not enabled */
-    SOFTAP_ERROR_OPERATION_FAILED = TIZEN_ERROR_TETHERING | 0x0502,  /**< Operation failed */
+    SOFTAP_ERROR_NOT_ENABLED = TIZEN_ERROR_SOFTAP | 0x0501,  /**< Not enabled */
+    SOFTAP_ERROR_OPERATION_FAILED = TIZEN_ERROR_SOFTAP | 0x0502,  /**< Operation failed */
     SOFTAP_ERROR_INVALID_OPERATION = TIZEN_ERROR_INVALID_OPERATION, /**< Invalid operation */
     SOFTAP_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED, /**< API is not supported */
     SOFTAP_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED,  /**< Permission denied */
