@@ -244,6 +244,37 @@ int softap_create(softap_h *softap);
 int softap_destroy(softap_h softap);
 
 /**
+ * @brief Enables the softap, asynchronously.
+ * @since_tizen 3.0
+ * @param[in]  softap  The softap handle
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval	#SOFTAP_ERROR_NOT_PERMITTED  Operation not permitted
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_INVALID_OPERATION  Invalid operation
+ * @retval  #SOFTAP_ERROR_RESOURCE_BUSY Device or resource busy
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ * @post softap_enabled_cb() will be invoked.
+ * @see  softap_is_enabled()
+ * @see  softap_disable()
+ */
+int softap_enable(softap_h softap);
+/**
+ * @brief Disables the softap, asynchronously.
+ * @since_tizen 3.0
+ * @param[in]  softap  The softap handle
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_INVALID_OPERATION  Invalid operation
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ * @post softap_disabled_cb() will be invoked.
+ * @see  softap_is_enabled()
+ * @see  softap_enable()
+ */
+int softap_disable(softap_h softap);
+
+/**
  * @brief Checks whether the softap is enabled or not.
  * @since_tizen 3.0
  * @param[in]  softap  The softap handle
@@ -652,6 +683,21 @@ int softap_set_passphrase(softap_h softap, const char *passphrase);
  */
 int softap_get_passphrase(softap_h softap, char **passphrase);
 
+/**
+ * @brief Reloads the settings (SSID / Passphrase / Security type / SSID visibility) for Soft AP.
+ * @since_tizen 3.0
+ * @remarks Devices connected via MobileAP will be disconnected when the settings are reloaded.
+ * @param[in]  softap  The softap handle
+ * @param[in]  callback  The callback function to invoke
+ * @param[in]  user_data  The user data to be passed to the callback function
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_OPERATION_FAILED  Operation failed
+ * @retval  #SOFTAP_ERROR_RESOURCE_BUSY Device or resource busy
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ */
+int softap_reload_settings(softap_h softap, softap_settings_reloaded_cb callback, void *user_data);
 /**
  * @}
  */
