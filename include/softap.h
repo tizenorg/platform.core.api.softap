@@ -244,6 +244,37 @@ int softap_create(softap_h *softap);
 int softap_destroy(softap_h softap);
 
 /**
+ * @brief Enables the softap, asynchronously.
+ * @since_tizen 3.0
+ * @param[in]  softap  The softap handle
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval	#SOFTAP_ERROR_NOT_PERMITTED  Operation not permitted
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_INVALID_OPERATION  Invalid operation
+ * @retval  #SOFTAP_ERROR_RESOURCE_BUSY Device or resource busy
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ * @post softap_enabled_cb() will be invoked.
+ * @see  softap_is_enabled()
+ * @see  softap_disable()
+ */
+int softap_enable(softap_h softap);
+/**
+ * @brief Disables the softap, asynchronously.
+ * @since_tizen 3.0
+ * @param[in]  softap  The softap handle
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_INVALID_OPERATION  Invalid operation
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ * @post softap_disabled_cb() will be invoked.
+ * @see  softap_is_enabled()
+ * @see  softap_enable()
+ */
+int softap_disable(softap_h softap);
+
+/**
  * @brief Checks whether the softap is enabled or not.
  * @since_tizen 3.0
  * @param[in]  softap  The softap handle
