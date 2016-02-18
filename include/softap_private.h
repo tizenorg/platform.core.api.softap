@@ -134,20 +134,8 @@ typedef enum {
 } mobile_ap_event_e;
 
 typedef enum {
-	MOBILE_AP_TYPE_WIFI,
-	MOBILE_AP_TYPE_USB,
-	MOBILE_AP_TYPE_BT,
-	MOBILE_AP_TYPE_WIFI_AP,
-	MOBILE_AP_TYPE_MAX,
-} mobile_ap_type_e;
-
-typedef enum {
-	E_SIGNAL_NET_CLOSED = 0,
-	E_SIGNAL_WIFI_TETHER_ON,
-	E_SIGNAL_WIFI_TETHER_OFF,
-	E_SIGNAL_WIFI_AP_ON = 9,
-	E_SIGNAL_WIFI_AP_OFF,
-	E_SIGNAL_NO_DATA_TIMEOUT,
+	E_SIGNAL_SOFTAP_ON,
+	E_SIGNAL_SOFTAP_OFF,
 	E_SIGNAL_LOW_BATTERY_MODE,
 	E_SIGNAL_FLIGHT_MODE,
 	E_SIGNAL_SECURITY_TYPE_CHANGED,
@@ -157,18 +145,17 @@ typedef enum {
 	E_SIGNAL_MAX
 } mobile_ap_sig_e;
 
-#define SOFTAP_SERVICE_OBJECT_PATH	"/Softap"
-#define SOFTAP_SERVICE_NAME		"org.tizen.softap"
+#define SOFTAP_SERVICE_OBJECT_PATH	"/MobileapAgent"
+#define SOFTAP_SERVICE_NAME		"org.tizen.MobileapAgent"
 #define SOFTAP_SERVICE_INTERFACE	"org.tizen.softap"
 
 #define SOFTAP_SIGNAL_MATCH_RULE	"type='signal',interface='org.tizen.softap'"
 #define SOFTAP_SIGNAL_NAME_LEN	64
 
-#define SIGNAL_NAME_NET_CLOSED		"net_closed"
 #define SIGNAL_NAME_STA_CONNECT		"sta_connected"
 #define SIGNAL_NAME_STA_DISCONNECT	"sta_disconnected"
-#define SIGNAL_NAME_WIFI_AP_ON		"wifi_ap_on"
-#define SIGNAL_NAME_WIFI_AP_OFF		"wifi_ap_off"
+#define SIGNAL_NAME_SOFTAP_ON		"softap_on"
+#define SIGNAL_NAME_SOFTAP_OFF		"softap_off"
 #define SIGNAL_NAME_NO_DATA_TIMEOUT	"no_data_timeout"
 #define SIGNAL_NAME_LOW_BATTERY_MODE	"low_batt_mode"
 #define SIGNAL_NAME_FLIGHT_MODE		"flight_mode"
@@ -208,6 +195,59 @@ typedef enum {
 #define SOFTAP_ERROR_RECOVERY_MAX			3
 #define SECURITY_TYPE_LEN	32
 #define PSK_ITERATION_COUNT	4096
+
+typedef void(*__handle_cb_t)(GDBusConnection *connection, const gchar *sender_name,
+		const gchar *object_path, const gchar *interface_name, const gchar *signal_name,
+		GVariant *parameters, gpointer user_data);
+
+typedef struct {
+	int sig_id;
+	char name[SOFTAP_SIGNAL_NAME_LEN];
+	__handle_cb_t cb;
+} __softap_sig_t;
+
+typedef struct {
+	/* GDBus */
+	GDBusConnection *client_bus;
+	GDBusProxy *client_bus_proxy;
+	GCancellable *cancellable;
+
+	/* Callbacks*/
+	softap_enabled_cb enabled_cb;
+	void *enabled_user_data;
+	softap_disabled_cb disabled_cb;
+	void *disabled_user_data;
+	softap_client_connection_state_changed_cb changed_cb;
+	void *changed_user_data;
+	softap_security_type_changed_cb security_type_changed_cb;
+	void *security_type_user_data;
+	softap_ssid_visibility_changed_cb ssid_visibility_changed_cb;
+	void *ssid_visibility_user_data;
+	softap_passphrase_changed_cb passphrase_changed_cb;
+	void *passphrase_user_data;
+	softap_settings_reloaded_cb settings_reloaded_cb;
+	void *settings_reloaded_user_data;
+
+	/* Settings */
+	char *ssid;
+	char passphrase[SOFTAP_KEY_MAX_LEN + 1];
+	bool visibility;
+	softap_security_type_e sec_type;
+} __softap_h;
+
+typedef struct {
+	char ip[SOFTAP_STR_INFO_LEN];	/**< assigned IP address */
+	char mac[SOFTAP_STR_INFO_LEN];	/**< MAC Address */
+	char *hostname;
+	time_t tm;						/**< connection time */
+} __softap_client_h;
+
+typedef struct {
+	char ssid[SOFTAP_SSID_MAX_LEN];
+	char key[SOFTAP_KEY_MAX_LEN + 1];
+	softap_security_type_e sec_type;
+	bool visibility;
+} _softap_settings_t;
 
 #ifdef __cplusplus
 }
