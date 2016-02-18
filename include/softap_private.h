@@ -157,8 +157,8 @@ typedef enum {
 	E_SIGNAL_MAX
 } mobile_ap_sig_e;
 
-#define SOFTAP_SERVICE_OBJECT_PATH	"/Softap"
-#define SOFTAP_SERVICE_NAME		"org.tizen.softap"
+#define SOFTAP_SERVICE_OBJECT_PATH	"/MobileapAgent"
+#define SOFTAP_SERVICE_NAME		"org.tizen.MobileapAgent"
 #define SOFTAP_SERVICE_INTERFACE	"org.tizen.softap"
 
 #define SOFTAP_SIGNAL_MATCH_RULE	"type='signal',interface='org.tizen.softap'"
@@ -208,6 +208,24 @@ typedef enum {
 #define SOFTAP_ERROR_RECOVERY_MAX			3
 #define SECURITY_TYPE_LEN	32
 #define PSK_ITERATION_COUNT	4096
+
+typedef struct {
+	GDBusConnection *client_bus;
+	GDBusProxy *client_bus_proxy;
+	GCancellable *cancellable;
+
+	char *ssid;
+	char passphrase[SOFTAP_KEY_MAX_LEN + 1];
+	bool visibility;
+	softap_security_type_e sec_type;
+} __softap_h;
+
+typedef struct {
+	char ssid[SOFTAP_SSID_MAX_LEN];
+	char key[SOFTAP_KEY_MAX_LEN + 1];
+	softap_security_type_e sec_type;
+	bool visibility;
+} _softap_settings_t;
 
 #ifdef __cplusplus
 }
