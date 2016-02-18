@@ -65,7 +65,7 @@ IF(NOT "${ARCH}" STREQUAL "emul")
 	INSTALL(FILES "${CMAKE_CURRENT_SOURCE_DIR}/sysinfo-softap.xml" DESTINATION "/etc/config/connectivity")
 ENDIF(NOT "${ARCH}" STREQUAL "emul")
 
-#ADD_SUBDIRECTORY(test)
+ADD_SUBDIRECTORY(test)
 
 IF(UNIX)
 
