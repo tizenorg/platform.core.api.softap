@@ -5,7 +5,7 @@
 	"http://standards.freedesktop.org/dbus/1.0/introspect.dtd">
 
 <node>
-	<interface name="org.tizen.tethering">
+	<interface name="org.tizen.softap">
 
 		<!-- Method definitions -->
 
@@ -59,14 +59,6 @@
 			<arg type="s" name="arg1" direction="out"/>
 		</signal>
 
-		<signal name="wifi_ap_on">
-			<arg type="s" name="arg1" direction="out"/>
-		</signal>
-
-		<signal name="wifi_ap_off">
-			<arg type="s" name="arg1" direction="out"/>
-		</signal>
-
 		<signal name="no_data_timeout">
 			<arg type="s" name="arg1" direction="out"/>
 		</signal>
@@ -76,6 +68,14 @@
 		</signal>
 
 		<signal name="flight_mode">
+			<arg type="s" name="arg1" direction="out"/>
+		</signal>
+
+		<signal name="soft_ap_on">
+			<arg type="s" name="arg1" direction="out"/>
+		</signal>
+
+		<signal name="soft_ap_off">
 			<arg type="s" name="arg1" direction="out"/>
 		</signal>
 
