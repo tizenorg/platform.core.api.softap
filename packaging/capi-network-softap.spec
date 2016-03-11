@@ -1,6 +1,6 @@
 Name:		capi-network-softap
 Summary:	Softap Framework
-Version:	0.0.1
+Version:	0.0.2
 Release:	1
 Group:		System/Network
 License:	Apache-2.0
@@ -74,7 +74,7 @@ cp LICENSE.APLv2.0 %{buildroot}/usr/share/license/capi-network-softap-devel
 %defattr(-,root,root,-)
 %{_libdir}/*.so.*
 /usr/share/license/capi-network-softap
-#%{_bindir}/softap_test
+%{_bindir}/softap_test
 %ifarch %{arm}
 /etc/config/connectivity/sysinfo-softap.xml
 %else
