@@ -76,6 +76,26 @@ static __softap_sig_t sigs[] = {
 
 static int retry = 0;
 
+static void __send_dbus_signal(GDBusConnection *conn, const char *signal_name, const char *arg)
+{
+	if (conn == NULL || signal_name == NULL)
+		return;
+
+	GVariant *message = NULL;
+	GError *error = NULL;
+
+	if (arg)
+		message = g_variant_new("(s)", arg);
+
+	g_dbus_connection_emit_signal(conn, NULL, SOFTAP_SERVICE_OBJECT_PATH,
+					SOFTAP_SERVICE_INTERFACE, signal_name, message, &error);
+	if (error) {
+		ERR("g_dbus_connection_emit_signal is failed because  %s\n", error->message);
+		g_error_free(error);
+	}
+	g_variant_unref(message);
+}
+
 static int __get_common_ssid(char *ssid, unsigned int size)
 {
 	if (ssid == NULL) {
@@ -95,6 +115,54 @@ static int __get_common_ssid(char *ssid, unsigned int size)
 
 	if (!g_utf8_validate(ssid, -1, (const char **)&end))
 		*end = '\0';
+
+	return SOFTAP_ERROR_NONE;
+}
+
+static softap_error_e __get_security_type(softap_security_type_e *security_type)
+{
+	if (security_type == NULL) {
+		ERR("Invalid param\n");
+		return SOFTAP_ERROR_INVALID_PARAMETER;
+	}
+
+	if (vconf_get_int(VCONFKEY_SOFTAP_SECURITY,
+				(int *)security_type) < 0) {
+		ERR("vconf_get_int is failed\n");
+		return SOFTAP_ERROR_OPERATION_FAILED;
+	}
+
+	return SOFTAP_ERROR_NONE;
+}
+
+static softap_error_e __set_visibility(bool visible)
+{
+	if (vconf_set_int(VCONFKEY_SOFTAP_HIDE, visible ? 0 : 1) < 0) {
+			ERR("vconf_set_int is failed\n");
+			return SOFTAP_ERROR_OPERATION_FAILED;
+		}
+
+		return SOFTAP_ERROR_NONE;
+}
+
+static softap_error_e __get_visibility(bool *visible)
+{
+	if (visible == NULL) {
+		ERR("Invalid param\n");
+		return SOFTAP_ERROR_INVALID_PARAMETER;
+	}
+
+	int hide = 0;
+
+	if (vconf_get_int(VCONFKEY_SOFTAP_HIDE, &hide) < 0) {
+		ERR("vconf_get_int is failed\n");
+		return SOFTAP_ERROR_OPERATION_FAILED;
+	}
+
+	if (hide)
+		*visible = false;
+	else
+		*visible = true;
 
 	return SOFTAP_ERROR_NONE;
 }
@@ -503,6 +571,44 @@ static void __disabled_cfm_cb(GObject *source_object, GAsyncResult *res,
 	return;
 }
 
+
+static void __settings_reloaded_cb(GObject *source_object, GAsyncResult *res,
+		gpointer user_data)
+{
+	DBG("+\n");
+
+	_retm_if(user_data == NULL, "parameter(user_data) is NULL\n");
+	GError *g_error = NULL;
+	GVariant *g_var;
+	guint info;
+	__softap_h *sa = (__softap_h *)user_data;
+	softap_error_e softap_error;
+
+	g_var  = g_dbus_proxy_call_finish(sa->client_bus_proxy, res, &g_error);
+	if (g_error) {
+		ERR("DBus fail [%s]\n", g_error->message);
+		if (g_error->code == G_DBUS_ERROR_ACCESS_DENIED)
+			softap_error = SOFTAP_ERROR_PERMISSION_DENIED;
+		else
+			softap_error = SOFTAP_ERROR_OPERATION_FAILED;
+		g_error_free(g_error);
+	}
+	if (sa->settings_reloaded_cb == NULL) {
+		DBG("There is no settings_reloaded_cb\n-\n");
+		return;
+	}
+	g_variant_get(g_var, "(u)", &info);
+	softap_error = __get_error(info);
+	g_variant_unref(g_var);
+
+	sa->settings_reloaded_cb(softap_error,
+			sa->settings_reloaded_user_data);
+
+	sa->settings_reloaded_cb = NULL;
+	sa->settings_reloaded_user_data = NULL;
+	DBG("-\n");
+}
+
 static int __prepare_softap_settings(softap_h softap, _softap_settings_t *set)
 {
 	DBG("+");
@@ -559,6 +665,43 @@ static void __disconnect_signals(softap_h softap)
 	for (i = E_SIGNAL_SOFTAP_ON; i < E_SIGNAL_MAX; i++)
 		g_dbus_connection_signal_unsubscribe(connection, sigs[i].sig_id);
 	DBG("-");
+}
+
+static softap_error_e __set_security_type(const softap_security_type_e security_type)
+{
+	if (security_type != SOFTAP_SECURITY_TYPE_NONE &&
+			security_type != SOFTAP_SECURITY_TYPE_WPA2_PSK) {
+		ERR("Invalid param\n");
+		return SOFTAP_ERROR_INVALID_PARAMETER;
+	}
+
+	if (vconf_set_int(VCONFKEY_SOFTAP_SECURITY, security_type) < 0) {
+		ERR("vconf_set_int is failed\n");
+		return SOFTAP_ERROR_OPERATION_FAILED;
+	}
+
+	return SOFTAP_ERROR_NONE;
+}
+
+static bool __get_ssid_from_vconf(const char *path, char *ssid, unsigned int size)
+{
+	if (path == NULL || ssid == NULL || size == 0)
+		return false;
+
+	char *ptr = NULL;
+	char *ptr_tmp = NULL;
+
+	ptr = vconf_get_str(path);
+	if (ptr == NULL)
+		return false;
+
+	if (!g_utf8_validate(ptr, -1, (const char **)&ptr_tmp))
+		*ptr_tmp = '\0';
+
+	g_strlcpy(ssid, ptr, size);
+	free(ptr);
+
+	return true;
 }
 
 API int softap_create(softap_h *softap)
@@ -710,6 +853,43 @@ API int softap_disable(softap_h softap)
 			(GAsyncReadyCallback) __disabled_cfm_cb, (gpointer)softap);
 
 	DBG("-");
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_reload_settings(softap_h softap, softap_settings_reloaded_cb callback, void *user_data)
+
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+	_softap_settings_t set = {"", "", 0, false};
+	GDBusProxy *proxy = sa->client_bus_proxy;
+	int ret = 0;
+
+	DBG("+");
+
+	if (sa->settings_reloaded_cb) {
+		ERR("Operation in progress\n");
+		return SOFTAP_ERROR_OPERATION_FAILED;
+	}
+
+	ret = __prepare_softap_settings(softap, &set);
+	if (ret != SOFTAP_ERROR_NONE) {
+		ERR("softap settings initialization failed\n");
+		return SOFTAP_ERROR_OPERATION_FAILED;
+	}
+
+	sa->settings_reloaded_cb = callback;
+	sa->settings_reloaded_user_data = user_data;
+
+	g_dbus_proxy_call(proxy, "reload_settings",
+			g_variant_new("(ssii)", set.ssid, set.key, set.visibility, set.sec_type),
+			G_DBUS_CALL_FLAGS_NONE, -1, sa->cancellable,
+			(GAsyncReadyCallback) __settings_reloaded_cb, (gpointer)softap);
+
 	return SOFTAP_ERROR_NONE;
 }
 
@@ -885,6 +1065,91 @@ API int softap_get_subnet_mask(softap_h softap, softap_address_family_e address_
 	return SOFTAP_ERROR_NONE;
 }
 
+API int softap_foreach_connected_clients(softap_h softap, softap_connected_client_cb callback, void *user_data)
+{
+	DBG("+\n");
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+	__softap_client_h client = {"", };
+	gchar *ip = NULL;
+	gchar *mac = NULL;
+	gchar *hostname = NULL;
+	guint timestamp = 0;
+	GError *error = NULL;
+	GVariant *result = NULL;
+	GVariantIter *outer_iter = NULL;
+	GVariantIter *inner_iter = NULL;
+	GVariant *station = NULL;
+	GVariant *value = NULL;
+	gchar *key = NULL;
+	int interface = 0;
+
+	result = g_dbus_proxy_call_sync(sa->client_bus_proxy, "get_station_info",
+			NULL, G_DBUS_CALL_FLAGS_NONE,
+			-1, sa->cancellable, &error);
+	if (error)
+		ERR("g_dbus_proxy_call_sync is failed and error is %s\n", error->message);
+	g_variant_get(result, "(a(a{sv}))", &outer_iter);
+
+	while (g_variant_iter_loop(outer_iter, "(@a{sv})", &station)) {
+		g_variant_get(station, "a{sv}", &inner_iter);
+
+		while (g_variant_iter_loop(inner_iter, "{sv}", &key, &value)) {
+			if (g_strcmp0(key, "Type") == 0) {
+				interface = g_variant_get_int32(value);
+				if (interface != 3) {
+					g_free(key);
+					g_variant_unref(value);
+					break;
+				}
+			}
+			if (g_strcmp0(key, "IP") == 0) {
+				g_variant_get(value, "s", &ip);
+				SDBG("ip is %s\n", ip);
+				g_strlcpy(client.ip, ip, sizeof(client.ip));
+			} else if (g_strcmp0(key, "MAC") == 0) {
+				g_variant_get(value, "s", &mac);
+				SDBG("mac is %s\n", mac);
+				g_strlcpy(client.mac, mac, sizeof(client.mac));
+			} else if (g_strcmp0(key, "Name") == 0) {
+				g_variant_get(value, "s", &hostname);
+				SDBG("hsotname is %s\n", hostname);
+				if (hostname)
+					client.hostname = g_strdup(hostname);
+			} else if (g_strcmp0(key, "Time") == 0) {
+				timestamp = g_variant_get_int32(value);
+				DBG("timestamp is %d\n", timestamp);
+				client.tm = (time_t)timestamp;
+			} else {
+				ERR("Key %s not required\n", key);
+			}
+		}
+		g_free(hostname);
+		g_free(ip);
+		g_free(mac);
+		g_variant_iter_free(inner_iter);
+		if (callback((softap_client_h)&client, user_data) == false) {
+			DBG("iteration is stopped\n");
+			g_free(client.hostname);
+			g_variant_iter_free(outer_iter);
+			g_variant_unref(station);
+			g_variant_unref(result);
+			DBG("-\n");
+			return SOFTAP_ERROR_OPERATION_FAILED;
+		}
+		g_free(client.hostname);
+	}
+	g_variant_iter_free(outer_iter);
+	g_variant_unref(station);
+	g_variant_unref(result);
+	DBG("-\n");
+	return SOFTAP_ERROR_NONE;
+}
+
 API int softap_set_enabled_cb(softap_h softap, softap_enabled_cb callback, void *user_data)
 {
 	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
@@ -939,4 +1204,219 @@ API int softap_unset_disabled_cb(softap_h softap)
 	sa->disabled_user_data = NULL;
 
 	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_set_client_connection_state_changed_cb(softap_h softap, softap_client_connection_state_changed_cb callback, void *user_data)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->changed_cb = callback;
+	sa->changed_user_data = user_data;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_unset_client_connection_state_changed_cb(softap_h softap)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->changed_cb = NULL;
+	sa->changed_user_data = NULL;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+
+API int softap_set_security_type_changed_cb(softap_h softap, softap_security_type_changed_cb callback, void *user_data)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->security_type_changed_cb = callback;
+	sa->security_type_user_data = user_data;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_unset_security_type_changed_cb(softap_h softap)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->security_type_changed_cb = NULL;
+	sa->security_type_user_data = NULL;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_set_ssid_visibility_changed_cb(softap_h softap, softap_ssid_visibility_changed_cb callback, void *user_data)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->ssid_visibility_changed_cb = callback;
+	sa->ssid_visibility_user_data = user_data;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_unset_ssid_visibility_changed_cb(softap_h softap)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->ssid_visibility_changed_cb = NULL;
+	sa->ssid_visibility_user_data = NULL;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_set_security_type(softap_h softap, softap_security_type_e type)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *) softap;
+	softap_error_e ret = SOFTAP_ERROR_NONE;
+
+	ret = __set_security_type(type);
+	if (ret == SOFTAP_ERROR_NONE) {
+
+		__send_dbus_signal(sa->client_bus,
+				SIGNAL_NAME_SECURITY_TYPE_CHANGED,
+				type == SOFTAP_SECURITY_TYPE_NONE ?
+				SOFTAP_SECURITY_TYPE_OPEN_STR :
+				SOFTAP_SECURITY_TYPE_WPA2_PSK_STR);
+	}
+	return ret;
+}
+
+
+API int softap_get_security_type(softap_h softap, softap_security_type_e *type)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+				"parameter(softap) is NULL\n");
+	_retvm_if(type == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+				"parameter(type) is NULL\n");
+
+	return __get_security_type(type);
+}
+
+API int softap_set_ssid(softap_h softap, const char *ssid)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(ssid == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(ssid) is NULL\n");
+
+	__softap_h *sa = (__softap_h *) softap;
+	char *p_ssid = NULL;
+	int ssid_len = 0;
+
+	ssid_len = strlen(ssid);
+	if (ssid_len > SOFTAP_SSID_MAX_LEN) {
+		ERR("parameter(ssid) is too long");
+		return SOFTAP_ERROR_INVALID_PARAMETER;
+	}
+
+	p_ssid = strdup(ssid);
+	if (p_ssid == NULL) {
+		ERR("strdup failed\n");
+		return SOFTAP_ERROR_OUT_OF_MEMORY;
+	}
+
+	if (sa->ssid)
+		g_free(sa->ssid);
+	sa->ssid = p_ssid;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_get_ssid(softap_h softap, char **ssid)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(ssid == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(ssid) is NULL\n");
+
+	__softap_h *sa = (__softap_h *) softap;
+
+	char val[SOFTAP_SSID_MAX_LEN + 1] = {0, };
+	bool enable;
+
+	softap_is_enabled(softap, &enable);
+
+	if (!enable) {
+		if (sa->ssid != NULL) {
+			DBG("Private SSID is set\n");
+			*ssid = strdup(sa->ssid);
+		} else {
+			if (__get_ssid_from_vconf(VCONFKEY_SETAPPL_DEVICE_NAME_STR,
+						val, sizeof(val)) == false) {
+				return SOFTAP_ERROR_OPERATION_FAILED;
+			}
+			*ssid = strdup(val);
+		}
+	} else {
+		if (__get_ssid_from_vconf(VCONFKEY_SOFTAP_SSID,
+					val, sizeof(val)) == false) {
+			return SOFTAP_ERROR_OPERATION_FAILED;
+		}
+		*ssid = strdup(val);
+	}
+	if (*ssid == NULL) {
+		ERR("strdup is failed\n");
+		return SOFTAP_ERROR_OUT_OF_MEMORY;
+	}
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_set_ssid_visibility(softap_h softap, bool visible)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *) softap;
+	softap_error_e ret = SOFTAP_ERROR_NONE;
+
+	ret = __set_visibility(visible);
+	if (ret == SOFTAP_ERROR_NONE) {
+		__send_dbus_signal(sa->client_bus,
+				SIGNAL_NAME_SSID_VISIBILITY_CHANGED,
+				visible ? SIGNAL_MSG_SSID_VISIBLE :
+				SIGNAL_MSG_SSID_HIDE);
+	}
+
+	return ret;
+}
+
+API int softap_get_ssid_visibility(softap_h softap, bool *visible)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(visible == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+				"parameter(visible) is NULL\n");
+
+	return __get_visibility(visible);
 }
