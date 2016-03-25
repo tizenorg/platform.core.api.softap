@@ -1291,6 +1291,34 @@ API int softap_unset_ssid_visibility_changed_cb(softap_h softap)
 	return SOFTAP_ERROR_NONE;
 }
 
+API int softap_set_passphrase_changed_cb(softap_h softap, softap_passphrase_changed_cb callback, void *user_data)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(callback == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(callback) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->passphrase_changed_cb = callback;
+	sa->passphrase_user_data = user_data;
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_unset_passphrase_changed_cb(softap_h softap)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+
+	sa->passphrase_changed_cb = NULL;
+	sa->passphrase_user_data = NULL;
+
+	return SOFTAP_ERROR_NONE;
+}
+
 API int softap_set_security_type(softap_h softap, softap_security_type_e type)
 {
 	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
@@ -1416,7 +1444,65 @@ API int softap_get_ssid_visibility(softap_h softap, bool *visible)
 	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
 			"parameter(softap) is NULL\n");
 	_retvm_if(visible == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
-				"parameter(visible) is NULL\n");
+			"parameter(visible) is NULL\n");
 
 	return __get_visibility(visible);
+}
+
+API int softap_set_passphrase(softap_h softap, const char *passphrase)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(passphrase == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(passphrase) is NULL\n");
+
+	__softap_h *sa = (__softap_h *)softap;
+	int passphrase_len = 0;
+
+	DBG("+");
+	passphrase_len = strlen(passphrase);
+	if (passphrase_len < SOFTAP_KEY_MIN_LEN ||
+			passphrase_len > SOFTAP_KEY_MAX_LEN) {
+		ERR("parameter(passphrase) is too short or long\n");
+		return SOFTAP_ERROR_INVALID_PARAMETER;
+	}
+
+	g_strlcpy(sa->passphrase, passphrase, sizeof(sa->passphrase));
+
+	DBG("-");
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_get_passphrase(softap_h softap, char **passphrase)
+{
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
+	_retvm_if(passphrase == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(passphrase) is NULL\n");
+
+	__softap_h *sa = (__softap_h *) softap;
+
+	char val[SOFTAP_KEY_MAX_LEN + 1] = {0, };
+	bool enable;
+
+	softap_is_enabled(softap, &enable);
+
+	if (!enable) {
+		if (sa->passphrase != NULL) {
+			*passphrase = strdup(sa->passphrase);
+		} else {
+			g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
+			*passphrase = strdup(val);
+		}
+	} else {
+		g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
+		*passphrase = strdup(val);
+	}
+
+	if (*passphrase == NULL) {
+		ERR("strdup is failed\n");
+		return SOFTAP_ERROR_OUT_OF_MEMORY;
+	}
+
+	return SOFTAP_ERROR_NONE;
 }

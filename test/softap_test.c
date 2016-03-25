@@ -342,6 +342,7 @@ static int test_softap_get_settings(void)
 {
 	int ret = SOFTAP_ERROR_NONE;
 	char *ssid = NULL;
+	char *passphrase = NULL;
 	char *mac_address = NULL;
 	char *interface_name = NULL;
 	char *ip_address = NULL;
@@ -351,6 +352,10 @@ static int test_softap_get_settings(void)
 	softap_security_type_e security_type = SOFTAP_SECURITY_TYPE_NONE;
 
 	ret = softap_get_ssid(sa, &ssid);
+	if (ret != SOFTAP_ERROR_NONE)
+		return 0;
+
+	ret = softap_get_passphrase(sa, &passphrase);
 	if (ret != SOFTAP_ERROR_NONE)
 		return 0;
 
@@ -386,6 +391,7 @@ static int test_softap_get_settings(void)
 	printf("* SSID: %s\n", ssid);
 	printf("* SSID visibility: %d\n", visible);
 	printf("* Security type: %d\n", security_type);
+	printf("* Passphrase: %s\n", passphrase);
 	printf("* MAC address: %s\n", mac_address);
 	printf("* Network Interface: %s\n", interface_name);
 	printf("* IP address: %s\n", ip_address);
@@ -393,6 +399,7 @@ static int test_softap_get_settings(void)
 	printf("* subnet_mask: %s\n", subnet_mask);
 
 	if (ssid)	g_free(ssid);
+	if (passphrase)	g_free(passphrase);
 	if (mac_address)	g_free(mac_address);
 	if (interface_name)	g_free(interface_name);
 	if (ip_address)		g_free(ip_address);
@@ -453,6 +460,25 @@ static int test_softap_set_security_type(void)
 	}
 
 	ret = softap_set_security_type(sa, security_type);
+	if (ret != SOFTAP_ERROR_NONE)
+		return 0;
+
+	return 1;
+}
+
+static int test_softap_set_passphrase(void)
+{
+	int ret;
+	char passphrase[65];
+
+	printf("Input passphrase for Softap: ");
+	ret = scanf("%64s", passphrase);
+	if (ret < 0) {
+		printf("scanf is failed!!\n");
+		return 0;
+	}
+
+	ret = softap_set_passphrase(sa, passphrase);
 	if (ret != SOFTAP_ERROR_NONE)
 		return 0;
 
@@ -556,6 +582,9 @@ gboolean test_thread(GIOChannel *source, GIOCondition condition, gpointer data)
 		break;
 	case '9':
 		rv = test_softap_set_security_type();
+		break;
+	case 'a':
+		rv = test_softap_set_passphrase();
 		break;
 	case 'b':
 		rv = test_softap_get_client_info();
