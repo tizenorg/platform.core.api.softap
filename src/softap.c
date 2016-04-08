@@ -481,7 +481,6 @@ static void __handle_passphrase_changed(GDBusConnection *connection, const gchar
 static void __enabled_cfm_cb(GObject *source_object, GAsyncResult *res,
 		gpointer user_data)
 {
-	DBG("+");
 	_retm_if(user_data == NULL, "parameter(user_data) is NULL\n");
 	__softap_h *sa = (__softap_h *)user_data;
 	GError *g_error = NULL;
@@ -514,7 +513,7 @@ static void __enabled_cfm_cb(GObject *source_object, GAsyncResult *res,
 		if (error != SOFTAP_ERROR_NONE)
 			ERR("Fail to enable Soft AP (%d)!!", error);
 	}
-	
+
 	retry = 0;
 
 	sigs[E_SIGNAL_SOFTAP_ON].sig_id = g_dbus_connection_signal_subscribe(sa->client_bus,
@@ -523,12 +522,10 @@ static void __enabled_cfm_cb(GObject *source_object, GAsyncResult *res,
 			sigs[E_SIGNAL_SOFTAP_ON].cb, (gpointer)sa, NULL);
 
 	DBG("[DBG] sig.id for softap on (%d)", sigs[E_SIGNAL_SOFTAP_ON].sig_id);
-	
+
 	if (ecb)
 		ecb(error, true, data);
-	
-	DBG("-");
-	
+
 	return;
 }
 
@@ -644,7 +641,7 @@ static void __connect_signals(softap_h softap)
 
 	for (i = E_SIGNAL_SOFTAP_ON; i < E_SIGNAL_MAX; i++) {
 		sigs[i].sig_id = g_dbus_connection_signal_subscribe(connection,
-				NULL,SOFTAP_SERVICE_INTERFACE, sigs[i].name,
+				NULL, SOFTAP_SERVICE_INTERFACE, sigs[i].name,
 				SOFTAP_SERVICE_OBJECT_PATH, NULL, G_DBUS_SIGNAL_FLAGS_NONE,
 				sigs[i].cb, softap, NULL);
 	}
@@ -811,7 +808,6 @@ API int softap_enable(softap_h softap)
 	 softap_error_e ret = SOFTAP_ERROR_NONE;
 	 __softap_h *sa = (__softap_h *) softap;
 	 GDBusProxy *proxy = sa->client_bus_proxy;
-//	 GDBusConnection *connection = sa->client_bus;
 
 	 g_dbus_proxy_set_default_timeout(proxy, DBUS_TIMEOUT_INFINITE);
 
@@ -1006,7 +1002,7 @@ API int softap_get_ip_address(softap_h softap, softap_address_family_e address_f
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	_retvm_if(s < 0, SOFTAP_ERROR_OPERATION_FAILED, "Fail to get socket!!\n");
 
-	if (ioctl(s,SIOCGIFADDR, &ifr) < 0) {
+	if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
 		ERR("Fail to get interface name!!");
 		close(s);
 		return SOFTAP_ERROR_OPERATION_FAILED;
@@ -1480,24 +1476,13 @@ API int softap_get_passphrase(softap_h softap, char **passphrase)
 	_retvm_if(passphrase == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
 			"parameter(passphrase) is NULL\n");
 
-	__softap_h *sa = (__softap_h *) softap;
-
 	char val[SOFTAP_KEY_MAX_LEN + 1] = {0, };
 	bool enable;
 
 	softap_is_enabled(softap, &enable);
 
-	if (!enable) {
-		if (sa->passphrase != NULL) {
-			*passphrase = strdup(sa->passphrase);
-		} else {
-			g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
-			*passphrase = strdup(val);
-		}
-	} else {
-		g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
-		*passphrase = strdup(val);
-	}
+	g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
+	*passphrase = strdup(val);
 
 	if (*passphrase == NULL) {
 		ERR("strdup is failed\n");

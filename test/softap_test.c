@@ -146,7 +146,7 @@ static bool __clients_foreach_cb(softap_client_h client, void *data)
 	char *mac_address = NULL;
 	char *hostname = NULL;
 	time_t timestamp;
-	struct tm *t;
+	struct tm t;
 
 	/* Clone internal information */
 	if (softap_client_clone(&clone, client) != SOFTAP_ERROR_NONE) {
@@ -168,16 +168,16 @@ static bool __clients_foreach_cb(softap_client_h client, void *data)
 		g_print("softap_client_get_hostname is failed\n");
 	/* End of getting information */
 
-	t = localtime(&timestamp);
+	localtime_r(&timestamp, &t);
 
 	g_print("\n< Client Info. >\n");
 	g_print("\tIP Address %s\n", ip_address);
 	g_print("\tMAC Address : %s\n", mac_address);
 	g_print("\tHostname : %s\n", hostname);
 	g_print("\tTime stamp : %04d-%02d-%02d %02d:%02d:%02d",
-			t->tm_year + 1900, t->tm_mon + 1,
-			t->tm_mday, t->tm_hour,
-			t->tm_min, t->tm_sec);
+			t.tm_year + 1900, t.tm_mon + 1,
+			t.tm_mday, t.tm_hour,
+			t.tm_min, t.tm_sec);
 
 	/* Destroy cloned objects */
 	if (ip_address)
