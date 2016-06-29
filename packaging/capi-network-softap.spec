@@ -1,6 +1,6 @@
 Name:		capi-network-softap
 Summary:	Softap Framework
-Version:	0.0.5
+Version:	0.0.6
 Release:	1
 Group:		System/Network
 License:	Apache-2.0

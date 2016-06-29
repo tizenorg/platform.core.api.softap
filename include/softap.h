@@ -306,7 +306,7 @@ int softap_is_enabled(softap_h softap, bool *enable);
 int softap_get_mac_address(softap_h softap, char **mac_address);
 
 /**
- * @brief Gets the name of network interface (e.g. usb0).
+ * @brief Gets the name of network interface (e.g. seth_w0).
  * @since_tizen 3.0
  * @remarks @a interface_name must be released using free().
  * @param[in]  softap  The softap handle
