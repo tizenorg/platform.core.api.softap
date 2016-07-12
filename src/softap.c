@@ -704,6 +704,8 @@ static bool __get_ssid_from_vconf(const char *path, char *ssid, unsigned int siz
 API int softap_create(softap_h *softap)
 {
 	DBG("+");
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
 
 	__softap_h *sa = NULL;
 	GError *error = NULL;
@@ -894,6 +896,8 @@ API int softap_is_enabled(softap_h softap, bool *enable)
 	DBG("+");
 	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
 			"parameter(softap) is NULL");
+	_retvm_if(enable == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(enable) is NULL");
 
 	int is_on = 0;
 	int vconf_type = VCONFKEY_MOBILE_HOTSPOT_MODE_WIFI_AP;
