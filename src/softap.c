@@ -704,6 +704,8 @@ static bool __get_ssid_from_vconf(const char *path, char *ssid, unsigned int siz
 API int softap_create(softap_h *softap)
 {
 	DBG("+");
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL\n");
 
 	__softap_h *sa = NULL;
 	GError *error = NULL;
@@ -755,7 +757,8 @@ API int softap_create(softap_h *softap)
 			NULL, SOFTAP_SERVICE_NAME, SOFTAP_SERVICE_OBJECT_PATH,
 			SOFTAP_SERVICE_INTERFACE, sa->cancellable, &error);
 	if (!sa->client_bus_proxy) {
-		ERR("Fail to create the proxy object because of %s", error->message);
+		if (error)
+			ERR("Fail to create the proxy object because of %s", error->message);
 		g_cancellable_cancel(sa->cancellable);
 		g_object_unref(sa->cancellable);
 		free(sa);
@@ -894,6 +897,8 @@ API int softap_is_enabled(softap_h softap, bool *enable)
 	DBG("+");
 	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
 			"parameter(softap) is NULL");
+	_retvm_if(enable == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(enable) is NULL");
 
 	int is_on = 0;
 	int vconf_type = VCONFKEY_MOBILE_HOTSPOT_MODE_WIFI_AP;
