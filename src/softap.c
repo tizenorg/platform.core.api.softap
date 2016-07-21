@@ -757,8 +757,10 @@ API int softap_create(softap_h *softap)
 			NULL, SOFTAP_SERVICE_NAME, SOFTAP_SERVICE_OBJECT_PATH,
 			SOFTAP_SERVICE_INTERFACE, sa->cancellable, &error);
 	if (!sa->client_bus_proxy) {
-		if (error)
+		if (error) {
 			ERR("Fail to create the proxy object because of %s", error->message);
+			g_error_free(error);
+		}
 		g_cancellable_cancel(sa->cancellable);
 		g_object_unref(sa->cancellable);
 		free(sa);
