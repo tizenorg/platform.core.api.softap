@@ -126,10 +126,9 @@ static void __settings_reloaded_cb(softap_error_e result, void *user_data)
 
 static void __security_changed_cb(softap_security_type_e changed_type, void *user_data)
 {
-	g_print("Security type is changed to [%s]\n",
-			changed_type == SOFTAP_SECURITY_TYPE_NONE ?
-				"open" : "wpa2-psk");
-		return;
+	g_print("Security type is changed to [%d]\n", changed_type);
+
+	return;
 }
 
 static void __ssid_visibility_changed_cb(bool changed_visible, void *user_data)
@@ -452,7 +451,7 @@ static int test_softap_set_security_type(void)
 	int ret;
 	int security_type;
 
-	printf("Input security type for Soft AP (0:NONE, 1:WPA2_PSK)");
+	printf("Input security type for Soft AP (0:NONE, 1:WPA2_PSK, 2:WPS)");
 	ret = scanf("%9d", &security_type);
 	if (ret < 0) {
 		printf("scanf is failed!!\n");
@@ -507,6 +506,37 @@ static int test_softap_get_client_info(void)
 	return 1;
 }
 
+static int test_softap_push_wps_button(void)
+{
+	int ret;
+
+	ret = softap_push_wps_button(sa);
+
+	if (ret != SOFTAP_ERROR_NONE)
+			return 0;
+
+	return 1;
+}
+
+static int test_softap_set_wps_pin(void)
+{
+	int ret;
+	char wps_pin[128];
+
+	printf("Input WPS PIN: ");
+	ret = scanf("%127s", wps_pin);
+	if (ret < 0) {
+		printf("scanf is failed!!\n");
+		return 0;
+	}
+	ret = softap_set_wps_pin(sa, wps_pin);
+
+	if (ret != SOFTAP_ERROR_NONE)
+			return 0;
+
+	return 1;
+}
+
 int main(int argc, char **argv)
 {
 	GMainLoop *mainloop;
@@ -551,6 +581,8 @@ gboolean test_thread(GIOChannel *source, GIOCondition condition, gpointer data)
 		printf("a       - Set Soft AP passpharse\n");
 		printf("b       - Get Soft AP client information\n");
 		printf("c       - SoftAP reload settings\n");
+		printf("d       - Push WPS Button (WPS PBC)\n");
+		printf("e       - Set WPS PIN\n");
 		printf("0       - Exit \n");
 		printf("ENTER  - Show options menu.......\n");
 	}
@@ -591,6 +623,12 @@ gboolean test_thread(GIOChannel *source, GIOCondition condition, gpointer data)
 		break;
 	case 'c':
 		rv = test_softap_reload_settings();
+		break;
+	case 'd':
+		rv = test_softap_push_wps_button();
+		break;
+	case 'e':
+		rv = test_softap_set_wps_pin();
 		break;
 	}
 

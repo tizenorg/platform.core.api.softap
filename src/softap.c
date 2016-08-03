@@ -416,6 +416,8 @@ static void __handle_security_type_changed(GDBusConnection *connection, const gc
 		security_type = SOFTAP_SECURITY_TYPE_NONE;
 	else if (g_strcmp0(buf, SOFTAP_SECURITY_TYPE_WPA2_PSK_STR) == 0)
 		security_type = SOFTAP_SECURITY_TYPE_WPA2_PSK;
+	else if (g_strcmp0(buf, SOFTAP_SECURITY_TYPE_WPS_STR) == 0)
+		security_type = SOFTAP_SECURITY_TYPE_WPS;
 	else {
 		SERR("Unknown type : %s", buf);
 		g_free(buf);
@@ -667,7 +669,8 @@ static void __disconnect_signals(softap_h softap)
 static softap_error_e __set_security_type(const softap_security_type_e security_type)
 {
 	if (security_type != SOFTAP_SECURITY_TYPE_NONE &&
-			security_type != SOFTAP_SECURITY_TYPE_WPA2_PSK) {
+			security_type != SOFTAP_SECURITY_TYPE_WPA2_PSK &&
+			security_type != SOFTAP_SECURITY_TYPE_WPS) {
 		ERR("Invalid param\n");
 		return SOFTAP_ERROR_INVALID_PARAMETER;
 	}
@@ -825,7 +828,6 @@ API int softap_enable(softap_h softap)
 	}
 
 	g_dbus_connection_signal_unsubscribe(sa->client_bus, sigs[E_SIGNAL_SOFTAP_ON].sig_id);
-	DBG("[DBG] unsubscribe sig.id for softap on (%d)", sigs[E_SIGNAL_SOFTAP_ON].sig_id);
 
 	g_dbus_proxy_call(proxy, "enable",
 	g_variant_new("(ssii)", set.ssid, set.key, set.visibility, set.sec_type),
@@ -1329,15 +1331,27 @@ API int softap_set_security_type(softap_h softap, softap_security_type_e type)
 
 	__softap_h *sa = (__softap_h *) softap;
 	softap_error_e ret = SOFTAP_ERROR_NONE;
+	char *sec_str = NULL;
+
+	sa->sec_type = type;
+
+	switch (type) {
+	case SOFTAP_SECURITY_TYPE_NONE:
+		sec_str = SOFTAP_SECURITY_TYPE_OPEN_STR;
+		break;
+	case SOFTAP_SECURITY_TYPE_WPA2_PSK:
+		sec_str = SOFTAP_SECURITY_TYPE_WPA2_PSK_STR;
+		break;
+	case SOFTAP_SECURITY_TYPE_WPS:
+		sec_str = SOFTAP_SECURITY_TYPE_WPS_STR;
+		break;
+	}
 
 	ret = __set_security_type(type);
 	if (ret == SOFTAP_ERROR_NONE) {
 
 		__send_dbus_signal(sa->client_bus,
-				SIGNAL_NAME_SECURITY_TYPE_CHANGED,
-				type == SOFTAP_SECURITY_TYPE_NONE ?
-				SOFTAP_SECURITY_TYPE_OPEN_STR :
-				SOFTAP_SECURITY_TYPE_WPA2_PSK_STR);
+				SIGNAL_NAME_SECURITY_TYPE_CHANGED, sec_str);
 	}
 	return ret;
 }
@@ -1484,9 +1498,6 @@ API int softap_get_passphrase(softap_h softap, char **passphrase)
 			"parameter(passphrase) is NULL\n");
 
 	char val[SOFTAP_KEY_MAX_LEN + 1] = {0, };
-	bool enable;
-
-	softap_is_enabled(softap, &enable);
 
 	g_strlcpy(val, vconf_get_str(VCONFKEY_SOFTAP_KEY), sizeof(val));
 	*passphrase = strdup(val);
@@ -1495,6 +1506,80 @@ API int softap_get_passphrase(softap_h softap, char **passphrase)
 		ERR("strdup is failed\n");
 		return SOFTAP_ERROR_OUT_OF_MEMORY;
 	}
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_push_wps_button(softap_h softap)
+{
+	DBG("+");
+
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL");
+	__softap_h *sa = (__softap_h *)softap;
+	GDBusProxy *proxy = sa->client_bus_proxy;
+	GVariant *parameters = NULL;
+	int ret = 0;
+	GError *error = NULL;
+
+	parameters = g_dbus_proxy_call_sync(proxy, "push_wps_button",
+			NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if (error) {
+		ERR("g_dbus_proxy_call_sync failed because  %s\n", error->message);
+
+		if (error->code == G_DBUS_ERROR_ACCESS_DENIED)
+			ret = SOFTAP_ERROR_PERMISSION_DENIED;
+		else
+			ret = SOFTAP_ERROR_OPERATION_FAILED;
+
+		g_error_free(error);
+		return ret;
+	}
+
+	if (parameters != NULL) {
+		g_variant_get(parameters, "(u)", &ret);
+		g_variant_unref(parameters);
+	}
+
+	DBG("-");
+
+	return SOFTAP_ERROR_NONE;
+}
+
+API int softap_set_wps_pin(softap_h softap, const char *wps_pin)
+{
+	DBG("+");
+
+	_retvm_if(softap == NULL, SOFTAP_ERROR_INVALID_PARAMETER,
+			"parameter(softap) is NULL");
+	__softap_h *sa = (__softap_h *)softap;
+	GDBusProxy *proxy = sa->client_bus_proxy;
+	GVariant *parameters = NULL;
+	int ret = 0;
+	GError *error = NULL;
+
+	parameters = g_dbus_proxy_call_sync(proxy, "set_wps_pin",
+			g_variant_new("(s)", wps_pin), G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if (error) {
+		ERR("g_dbus_proxy_call_sync failed because  %s\n", error->message);
+
+		if (error->code == G_DBUS_ERROR_ACCESS_DENIED)
+			ret = SOFTAP_ERROR_PERMISSION_DENIED;
+		else
+			ret = SOFTAP_ERROR_OPERATION_FAILED;
+
+		g_error_free(error);
+		return ret;
+	}
+
+	if (parameters != NULL) {
+		g_variant_get(parameters, "(u)", &ret);
+		g_variant_unref(parameters);
+	}
+
+	DBG("-");
 
 	return SOFTAP_ERROR_NONE;
 }

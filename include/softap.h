@@ -91,6 +91,7 @@ typedef enum
 typedef enum {
     SOFTAP_SECURITY_TYPE_NONE = 0,  /**< No Security type */
     SOFTAP_SECURITY_TYPE_WPA2_PSK,  /**< WPA2_PSK */
+    SOFTAP_SECURITY_TYPE_WPS,  /**< WPS */
 } softap_security_type_e;
 
 /**
@@ -697,6 +698,35 @@ int softap_get_passphrase(softap_h softap, char **passphrase);
  * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
  */
 int softap_reload_settings(softap_h softap, softap_settings_reloaded_cb callback, void *user_data);
+
+/**
+ * @brief Pushes the WPS button to connect with Soft AP client. (WPS PBC)
+ * @since_tizen 3.0
+ * @remarks The WPS button should be pushed when client tries to connect with Soft AP by using WPS PBC.
+ * @param[in]  softap  The softap handle
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_OPERATION_FAILED  Operation failed
+ * @retval  #SOFTAP_ERROR_PERMISSION_DENIED  Permission denied
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ */
+int softap_push_wps_button(softap_h softap);
+
+/**
+ * @brief Sets the WPS PIN to connect with Soft AP client. (WPS PIN)
+ * @since_tizen 3.0
+ * @remarks The WPS PIN should be inserted when client tries to connect with Soft AP by using WPS PIN.
+ * @param[in]  softap  The softap handle
+ * @param[in]  wps_pin  The WPS PIN
+ * @return 0 on success, otherwise negative error value
+ * @retval  #SOFTAP_ERROR_NONE  Successful
+ * @retval  #SOFTAP_ERROR_INVALID_PARAMETER  Invalid parameter
+ * @retval  #SOFTAP_ERROR_OPERATION_FAILED  Operation failed
+ * @retval  #SOFTAP_ERROR_PERMISSION_DENIED  Permission denied
+ * @retval  #SOFTAP_ERROR_NOT_SUPPORTED  API is not supported
+ */
+int softap_set_wps_pin(softap_h softap, const char *wps_pin);
 /**
  * @}
  */
